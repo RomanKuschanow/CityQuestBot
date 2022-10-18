@@ -5,6 +5,8 @@ VisualStudioVersion = 17.4.32912.340
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CityQuestBot.Common", "CityQuestBot.Common\CityQuestBot.Common.csproj", "{0E135986-352A-4801-B947-3D531F333A97}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CityQuestBot.Functions", "CityQuestBot.Functions\CityQuestBot.Functions.csproj", "{E684F845-D15E-4C0D-A3C9-1A4D54D9C4BC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{0E135986-352A-4801-B947-3D531F333A97}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0E135986-352A-4801-B947-3D531F333A97}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0E135986-352A-4801-B947-3D531F333A97}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E684F845-D15E-4C0D-A3C9-1A4D54D9C4BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E684F845-D15E-4C0D-A3C9-1A4D54D9C4BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E684F845-D15E-4C0D-A3C9-1A4D54D9C4BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E684F845-D15E-4C0D-A3C9-1A4D54D9C4BC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
