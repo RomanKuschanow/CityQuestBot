@@ -17,19 +17,18 @@ namespace CityQuestBot.Functions
 {
     public class BotUpdateReceiver : IBotUpdateReceiver
     {
-        public BotUpdateReceiver(ILogger logger, Update update, IGetAppSettingService getAppSettingService, TableClient tableClient, BlobContainerClient blobClient)
+        public BotUpdateReceiver(ILogger logger, Update update, IGetAppSettingService getAppSettingService, TableClient usersTableClient, TableClient questsTableClient, BlobContainerClient blobClient)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.update = update ?? throw new ArgumentNullException(nameof(update));
-            this.tableClient = tableClient;
+            this.usersTableClient = usersTableClient;
+            this.questsTableClient = questsTableClient;
             this.blobClient = blobClient;
             telegramBotApiKey = getAppSettingService.TryGetAppSetting("TelegramBotApiKey") ?? null;
             botClient = telegramBotApiKey is { } ? new TelegramBotClient(telegramBotApiKey) : null;
         }
 
         static readonly HttpClient client = new HttpClient();
-
-        private static readonly Regex start = new Regex(@"^/start( [a-fA-F\d]{8}-?[a-fA-F\d]{4}-?[a-fA-F\d]{4}-?[a-fA-F\d]{4}-?[a-fA-F\d]{12})?$");
 
         public async Task<string> HandleUpdate()
         {
@@ -41,7 +40,8 @@ namespace CityQuestBot.Functions
         private const string NEWLINE = "  \r\n";
         private readonly string? telegramBotApiKey;
         private readonly ILogger logger;
-        private readonly TableClient tableClient;
+        private readonly TableClient usersTableClient;
+        private readonly TableClient questsTableClient;
         private readonly BlobContainerClient blobClient;
         private readonly Update update;
         private readonly TelegramBotClient? botClient;

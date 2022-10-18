@@ -29,14 +29,16 @@ namespace CityQuestBot.Functions
             IGetAppSettingService getAppSettingService = new GetAppSettingServiceOnAppSettings(options);
 
             string conn = getAppSettingService.GetAppSettingOrThrow("AzureWebJobsStorage");
-            var tableClient = new TableClient(conn, "registrations");
+            var usersTableClient = new TableClient(conn, "users");
+            var questsTableClient = new TableClient(conn, "users");
             var blobClient = new BlobContainerClient(conn, "backups");
 
             return new BotUpdateReceiver(
                 Log.ForContext<BotUpdateReceiver>(),
                 update,
                 getAppSettingService,
-                tableClient,
+                usersTableClient,
+                questsTableClient,
                 blobClient);
         }
     }
