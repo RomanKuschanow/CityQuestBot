@@ -1,6 +1,10 @@
-﻿using Azure;
+﻿#nullable disable
+using Azure;
 using Azure.Data.Tables;
 using Azure.Storage.Blobs;
+using CityQuestBot.Common;
+using CityQuestBot.Common.Models;
+using CityQuestBot.Common.Services;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.SignalRService;
 using Serilog;
@@ -43,6 +47,40 @@ namespace CityQuestBot.Functions
 
         public async Task<string> HandleUpdate()
         {
+            Message message = update.Message;
+            Users user = await UsersServices.GetUser(usersTableClient, message.Chat.Id.ToString());
+
+            if (message == null)
+            {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(message.Text))
+            {
+                await botClient.SendTextMessageAsync(message.Chat.Id, "Я понимаю только текст");
+            }
+
+            if (message.Text.StartsWith("/start") && user.CurrentQuest == null)
+            {
+                await Handlers.CommandStart(botClient, usersTableClient, questsTableClient, messagesTableClient, clueFilesBlobClient, update);
+                await Handlers.WriteHistory(historyTableClient, usersTableClient, update);
+                return "";
+            }
+
+            if (message.Text.StartsWith("/editPrewAnswer") && user.CurrentQuest != null)
+            {
+                await Handlers.CommandChangeAnswer(botClient, usersTableClient, answersTableClient, messagesTableClient, update);
+                await Handlers.WriteHistory(historyTableClient, usersTableClient, update);
+                return "";
+            }
+
+            if (user.CurrentQuest != null)
+            {
+                await Handlers.AnswerHandler(botClient, usersTableClient, messagesTableClient, answersTableClient, questsTableClient, clueFilesBlobClient, update);
+                await Handlers.WriteHistory(historyTableClient, usersTableClient, update);
+                return "";
+            }
+
             return "";
         }
 

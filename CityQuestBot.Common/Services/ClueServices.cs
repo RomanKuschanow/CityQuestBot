@@ -24,5 +24,18 @@ namespace CityQuestBot.Common.Services
 
             return messages;
         }
+
+        public static async Task<int> GetClueCount(TableClient messagesTableClient, string questId)
+        {
+            var clue = messagesTableClient.QueryAsync<Messages>(m => m.PartitionKey == questId);
+            List<Messages> messages = new List<Messages>();
+
+            await foreach (var message in clue)
+            {
+                messages.Add(message);
+            }
+
+            return messages.OrderBy(m => m.Step).Last().Step;
+        }
     }
 }

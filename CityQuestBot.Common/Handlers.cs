@@ -12,6 +12,7 @@ using System.Threading;
 using Azure.Storage.Blobs.Models;
 using Telegram.Bot.Types.InputFiles;
 using System.IO;
+using System;
 
 namespace CityQuestBot.Common
 {
@@ -53,6 +54,46 @@ namespace CityQuestBot.Common
             await botClient.SendTextMessageAsync(chatId, text);
         }
 
+        public static async Task CommandChangeAnswer(
+            TelegramBotClient botClient,
+            TableClient usersTableClient,
+            TableClient answersTableClient,
+            TableClient messagesTableClient,
+            Update update)
+        {
+            var chatId = update.Message.Chat.Id;
+
+            Users user = await UsersServices.GetUser(usersTableClient, chatId.ToString());
+
+            Regex regex = new Regex(@"/editPrevAnswer (.+)");
+
+            if (!regex.IsMatch(update.Message.Text))
+            {
+                string text = "Команда должна содержать новый ответ";
+                await botClient.SendTextMessageAsync(chatId, text);
+                return;
+            }
+
+            if (user.CurrentStep == 1)
+            {
+                string text = "Предыдущей загадки не было";
+                await botClient.SendTextMessageAsync(chatId, text);
+                return;
+            }
+
+            string newAnswer = regex.Match(update.Message.Text).Groups[1].Value;
+
+            if (user.CurrentStep == 0)
+            {
+                int lastStep = await ClueServices.GetClueCount(messagesTableClient, user.CurrentQuest);
+                await AnswersServices.EditAnswer(user.RowKey, answersTableClient, lastStep - 1, newAnswer);
+            }
+            else
+            {
+                await AnswersServices.EditAnswer(user.RowKey, answersTableClient, user.CurrentStep - 1, newAnswer);
+            }
+        }
+
         public static async Task AnswerHandler(
             TelegramBotClient botClient,
             TableClient usersTableClient,
@@ -91,6 +132,7 @@ namespace CityQuestBot.Common
             TelegramBotClient botClient,
             TableClient usersTableClient,
             TableClient messagesTableClient,
+            TableClient answersTableClient,
             BlobContainerClient clueFilesBlobClient,
             Update update)
         {
@@ -109,6 +151,9 @@ namespace CityQuestBot.Common
                 {
                     user.CurrentStep = 0;
                     await usersTableClient.UpdateEntityAsync(user, ETag.All);
+                    var answers = await AnswersServices.GetAnswers(user.RowKey, answersTableClient);
+                    string text = string.Join(Environment.NewLine, answers.Select(a => a.Answer));
+                    await botClient.SendTextMessageAsync(chatId, text);
                 }
 
                 if (message.Type == "win" || message.Type == "lose")
@@ -175,11 +220,17 @@ namespace CityQuestBot.Common
 
             if (quest.FinalCode == update.Message.Text)
             {
-                message = messages.Single(m => m.Type == "win");
+                message = messages.SingleOrDefault(m => m.Type == "win");
             }
             else
             {
-                message = messages.Single(m => m.Type == "lose");
+                message = messages.SingleOrDefault(m => m.Type == "lose");
+            }
+
+            if (message == null)
+            {
+                await botClient.SendTextMessageAsync(chatId, "Правильный ответ мне пока не известен 🤷‍♂️");
+                return;
             }
 
             if (message.ImageId != null)

@@ -1,7 +1,9 @@
-﻿using Azure.Data.Tables;
+﻿using Azure;
+using Azure.Data.Tables;
 using CityQuestBot.Common.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -21,6 +23,34 @@ namespace CityQuestBot.Common.Services
             };
 
             await answersTableClient.AddEntityAsync(userAnswer);
+        }
+
+        public static async Task<List<UserAnswers>> GetAnswers(string userId, TableClient answersTableClient)
+        {
+            var answersRequest = answersTableClient.QueryAsync<UserAnswers>(a => a.PartitionKey == userId);
+            List<UserAnswers> answers = new List<UserAnswers>();
+
+            await foreach (var answer in answersRequest)
+            {
+                answers.Add(answer);
+            }
+
+            return answers.OrderBy(a => a.Step).ToList();
+        }
+
+        public static async Task<UserAnswers> GetAnswer(string userId, TableClient answersTableClient, int step)
+        {
+            var answers = await GetAnswers(userId, answersTableClient);
+
+            return answers.Single(a => a.Step == step);
+        }
+
+        public static async Task EditAnswer(string userId, TableClient answersTableClient, int step, string newAnswer)
+        {
+            var answer = await GetAnswer(userId, answersTableClient, step);
+            answer.Answer = newAnswer;
+
+            await answersTableClient.UpdateEntityAsync(answer, ETag.All);
         }
     }
 }
