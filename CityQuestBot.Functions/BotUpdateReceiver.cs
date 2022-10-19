@@ -1,7 +1,6 @@
 ﻿using Azure;
 using Azure.Data.Tables;
 using Azure.Storage.Blobs;
-using CityQuestBot.Functions.Data;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.SignalRService;
 using Serilog;
@@ -17,12 +16,24 @@ namespace CityQuestBot.Functions
 {
     public class BotUpdateReceiver : IBotUpdateReceiver
     {
-        public BotUpdateReceiver(ILogger logger, Update update, IGetAppSettingService getAppSettingService, TableClient usersTableClient, TableClient questsTableClient, BlobContainerClient blobClient)
+        public BotUpdateReceiver(
+            ILogger logger, 
+            Update update, 
+            IGetAppSettingService getAppSettingService,
+            TableClient usersTableClient,
+            TableClient questsTableClient, 
+            TableClient messagesTableClient, 
+            TableClient answersTableClient, 
+            TableClient historyTableClient, 
+            BlobContainerClient blobClient)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.update = update ?? throw new ArgumentNullException(nameof(update));
             this.usersTableClient = usersTableClient;
             this.questsTableClient = questsTableClient;
+            this.messagesTableClient = messagesTableClient;
+            this.answersTableClient = answersTableClient;
+            this.historyTableClient = historyTableClient;
             this.blobClient = blobClient;
             telegramBotApiKey = getAppSettingService.TryGetAppSetting("TelegramBotApiKey") ?? null;
             botClient = telegramBotApiKey is { } ? new TelegramBotClient(telegramBotApiKey) : null;
@@ -42,6 +53,9 @@ namespace CityQuestBot.Functions
         private readonly ILogger logger;
         private readonly TableClient usersTableClient;
         private readonly TableClient questsTableClient;
+        private readonly TableClient messagesTableClient;
+        private readonly TableClient answersTableClient;
+        private readonly TableClient historyTableClient;
         private readonly BlobContainerClient blobClient;
         private readonly Update update;
         private readonly TelegramBotClient? botClient;

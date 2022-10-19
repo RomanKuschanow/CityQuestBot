@@ -30,8 +30,11 @@ namespace CityQuestBot.Functions
 
             string conn = getAppSettingService.GetAppSettingOrThrow("AzureWebJobsStorage");
             var usersTableClient = new TableClient(conn, "users");
-            var questsTableClient = new TableClient(conn, "users");
-            var blobClient = new BlobContainerClient(conn, "backups");
+            var questsTableClient = new TableClient(conn, "quests");
+            var messagesTableClient = new TableClient(conn, "messages");
+            var answersTableClient = new TableClient(conn, "answers");
+            var historyTableClient = new TableClient(conn, "history");
+            var blobClient = new BlobContainerClient(conn, "files");
 
             return new BotUpdateReceiver(
                 Log.ForContext<BotUpdateReceiver>(),
@@ -39,6 +42,9 @@ namespace CityQuestBot.Functions
                 getAppSettingService,
                 usersTableClient,
                 questsTableClient,
+                messagesTableClient,
+                answersTableClient,
+                historyTableClient,
                 blobClient);
         }
     }

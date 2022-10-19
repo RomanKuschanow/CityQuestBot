@@ -4,7 +4,7 @@ using System;
 
 namespace CityQuestBot.Common.Models
 {
-    public class MyEntity : ITableEntity
+    public class Messages : ITableEntity
     {
         public string PartitionKey { get; set; }
         public string RowKey { get; set; }
