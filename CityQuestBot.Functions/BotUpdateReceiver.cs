@@ -25,7 +25,7 @@ namespace CityQuestBot.Functions
             TableClient messagesTableClient, 
             TableClient answersTableClient, 
             TableClient historyTableClient, 
-            BlobContainerClient blobClient)
+            BlobContainerClient clueFilesBlobClient)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.update = update ?? throw new ArgumentNullException(nameof(update));
@@ -34,7 +34,7 @@ namespace CityQuestBot.Functions
             this.messagesTableClient = messagesTableClient;
             this.answersTableClient = answersTableClient;
             this.historyTableClient = historyTableClient;
-            this.blobClient = blobClient;
+            this.clueFilesBlobClient = clueFilesBlobClient;
             telegramBotApiKey = getAppSettingService.TryGetAppSetting("TelegramBotApiKey") ?? null;
             botClient = telegramBotApiKey is { } ? new TelegramBotClient(telegramBotApiKey) : null;
         }
@@ -56,7 +56,7 @@ namespace CityQuestBot.Functions
         private readonly TableClient messagesTableClient;
         private readonly TableClient answersTableClient;
         private readonly TableClient historyTableClient;
-        private readonly BlobContainerClient blobClient;
+        private readonly BlobContainerClient clueFilesBlobClient;
         private readonly Update update;
         private readonly TelegramBotClient? botClient;
     }

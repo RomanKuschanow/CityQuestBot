@@ -20,7 +20,7 @@ namespace CityQuestBot.Functions
                 .CreateLogger();
         }
 
-        public static IBotUpdateReceiver BuildBotUpdateReceiver(
+        public static async IBotUpdateReceiver BuildBotUpdateReceiver(
             Options options,
             Update update,
             ILogger log)
@@ -34,7 +34,15 @@ namespace CityQuestBot.Functions
             var messagesTableClient = new TableClient(conn, "messages");
             var answersTableClient = new TableClient(conn, "answers");
             var historyTableClient = new TableClient(conn, "history");
-            var blobClient = new BlobContainerClient(conn, "files");
+            var clueFilesBlobClient = new BlobContainerClient(conn, "clueFiles");
+            var historyFilesBlobClient = new BlobContainerClient(conn, "historyFiles");
+
+            await usersTableClient.CreateIfNotExistsAsync();
+            await questsTableClient.CreateIfNotExistsAsync();
+            await messagesTableClient.CreateIfNotExistsAsync();
+            await answersTableClient.CreateIfNotExistsAsync();
+            await historyTableClient.CreateIfNotExistsAsync();
+            await clueFilesBlobClient.CreateIfNotExistsAsync();
 
             return new BotUpdateReceiver(
                 Log.ForContext<BotUpdateReceiver>(),
@@ -45,7 +53,7 @@ namespace CityQuestBot.Functions
                 messagesTableClient,
                 answersTableClient,
                 historyTableClient,
-                blobClient);
+                clueFilesBlobClient);
         }
     }
 }

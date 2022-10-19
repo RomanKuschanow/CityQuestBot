@@ -6,7 +6,6 @@ using System.Text.RegularExpressions;
 using Azure;
 using CityQuestBot.Common.Services;
 using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 using Azure.Storage.Blobs;
 using System.Linq;
 using System.Threading;
@@ -19,11 +18,11 @@ namespace CityQuestBot.Common
     public static class Handlers
     {
         public static async Task CommandStart(
-            TelegramBotClient botClient, 
-            TableClient usersTableClient, 
+            TelegramBotClient botClient,
+            TableClient usersTableClient,
             TableClient questsTableClient,
             TableClient messagesTableClient,
-            BlobContainerClient blobClient,
+            BlobContainerClient clueFilesBlobClient,
             Update update)
         {
             var chatId = update.Message.Chat.Id;
@@ -44,7 +43,7 @@ namespace CityQuestBot.Common
                 user.CurrentQuest = quest.Value.RowKey;
                 user.CurrentStep = 1;
                 await usersTableClient.UpdateEntityAsync(user, ETag.All);
-                await SendClue(botClient, usersTableClient, messagesTableClient, blobClient, update);
+                await SendClue(botClient, usersTableClient, messagesTableClient, clueFilesBlobClient, update);
             }
             else
             {
@@ -55,11 +54,12 @@ namespace CityQuestBot.Common
         }
 
         public static async Task AnswerHandler(
-            TelegramBotClient botClient, 
+            TelegramBotClient botClient,
             TableClient usersTableClient,
-            TableClient messagesTableClient, 
-            TableClient answersTableClient, 
-            BlobContainerClient blobClient,
+            TableClient messagesTableClient,
+            TableClient answersTableClient,
+            TableClient questsTableClient,
+            BlobContainerClient clueFilesBlobClient,
             Update update)
         {
             var chatId = update.Message.Chat.Id;
@@ -74,17 +74,24 @@ namespace CityQuestBot.Common
 
             Users user = await UsersServices.GetUser(usersTableClient, chatId.ToString());
             await AnswersServices.CreateAnswer(update.Message.Text, user, answersTableClient);
+            if (user.CurrentStep == 0)
+            {
+                await SendFinalMessage(botClient, usersTableClient, messagesTableClient, questsTableClient, clueFilesBlobClient, update);
+                user.CurrentQuest = null;
+                await usersTableClient.UpdateEntityAsync(user, ETag.All);
+                return;
+            }
             user.CurrentStep++;
             await usersTableClient.UpdateEntityAsync(user, ETag.All);
 
-            await SendClue(botClient, usersTableClient, messagesTableClient, blobClient, update);
+            await SendClue(botClient, usersTableClient, messagesTableClient, clueFilesBlobClient, update);
         }
 
         private static async Task SendClue(
             TelegramBotClient botClient,
             TableClient usersTableClient,
             TableClient messagesTableClient,
-            BlobContainerClient blobClient,
+            BlobContainerClient clueFilesBlobClient,
             Update update)
         {
             var chatId = update.Message.Chat.Id;
@@ -98,6 +105,17 @@ namespace CityQuestBot.Common
 
             foreach (var message in messages)
             {
+                if (message.Type == "final")
+                {
+                    user.CurrentStep = 0;
+                    await usersTableClient.UpdateEntityAsync(user, ETag.All);
+                }
+
+                if (message.Type == "win" || message.Type == "lose")
+                {
+                    continue;
+                }
+
                 if (message.Type == "fact")
                 {
                     await Task.Run(async () =>
@@ -106,7 +124,7 @@ namespace CityQuestBot.Common
                         minutes += 4;
                         if (message.ImageId != null)
                         {
-                            var blob = blobClient.GetBlobClient(message.ImageId);
+                            var blob = clueFilesBlobClient.GetBlobClient(message.ImageId);
 
                             var file = (await blob.DownloadStreamingAsync()).Value.Content;
 
@@ -123,7 +141,7 @@ namespace CityQuestBot.Common
 
                 if (message.ImageId != null)
                 {
-                    var blob = blobClient.GetBlobClient(message.ImageId);
+                    var blob = clueFilesBlobClient.GetBlobClient(message.ImageId);
 
                     var file = (await blob.DownloadStreamingAsync()).Value.Content;
 
@@ -135,6 +153,56 @@ namespace CityQuestBot.Common
                 }
 
             }
+        }
+
+        private static async Task SendFinalMessage(
+            TelegramBotClient botClient,
+            TableClient usersTableClient,
+            TableClient messagesTableClient,
+            TableClient questsTableClient,
+            BlobContainerClient clueFilesBlobClient,
+            Update update)
+        {
+            var chatId = update.Message.Chat.Id;
+
+            Users user = await UsersServices.GetUser(usersTableClient, chatId.ToString());
+
+            var messages = await ClueServices.GetClue(messagesTableClient, user.CurrentQuest, user.CurrentStep);
+
+            var quest = (await questsTableClient.GetEntityAsync<Quests>("d", user.CurrentQuest)).Value;
+
+            Messages message;
+
+            if (quest.FinalCode == update.Message.Text)
+            {
+                message = messages.Single(m => m.Type == "win");
+            }
+            else
+            {
+                message = messages.Single(m => m.Type == "lose");
+            }
+
+            if (message.ImageId != null)
+            {
+                var blob = clueFilesBlobClient.GetBlobClient(message.ImageId);
+
+                var file = (await blob.DownloadStreamingAsync()).Value.Content;
+
+                await botClient.SendPhotoAsync(chatId, new InputOnlineFile(file), caption: message.MessageText);
+            }
+            else
+            {
+                await botClient.SendTextMessageAsync(chatId, message.MessageText);
+            }
+        }
+
+        public static async Task WriteHistory(
+            TableClient historyTableClient,
+            TableClient usersTableClient,
+            Update update)
+        {
+            Users user = await UsersServices.GetUser(usersTableClient, update.Message.Chat.Id.ToString());
+            await HistoryServices.CreateRecord(historyTableClient, user.RowKey, update.Message);
         }
     }
 }
