@@ -23,7 +23,7 @@ namespace CityQuestBot.Functions
         {
             try
             {
-                await Bootstrapper.BuildBotUpdateReceiver(options.Value, update, log).HandleUpdate();
+                await (await Bootstrapper.BuildBotUpdateReceiver(options.Value, update, log)).HandleUpdate();
             }
             catch (System.Exception ex)
             {

@@ -10,6 +10,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <PackageReference Include="Azure.Storage.Blobs" Version="12.12.0" />
 	  <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Tables" Version="1.0.0" />
 	  <PackageReference Include="Telegram.Bot" Version="18.0.0" />
 	</ItemGroup>

@@ -52,5 +52,15 @@ namespace CityQuestBot.Common.Services
 
             await answersTableClient.UpdateEntityAsync(answer, ETag.All);
         }
+
+        public static async Task DeleteAnswers(string userId, TableClient answersTableClient)
+        {
+            var answers = await GetAnswers(userId, answersTableClient);
+
+            foreach (var answer in answers)
+            {
+                await answersTableClient.DeleteEntityAsync(userId, answer.RowKey);
+            }
+        }
     }
 }

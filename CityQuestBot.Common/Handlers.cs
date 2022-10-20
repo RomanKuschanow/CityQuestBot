@@ -23,6 +23,7 @@ namespace CityQuestBot.Common
             TableClient usersTableClient,
             TableClient questsTableClient,
             TableClient messagesTableClient,
+            TableClient answersTableClient,
             BlobContainerClient clueFilesBlobClient,
             Update update)
         {
@@ -30,7 +31,7 @@ namespace CityQuestBot.Common
 
             Users user = await UsersServices.GetUser(usersTableClient, chatId.ToString());
 
-            Regex start = new Regex(@"^/start( [a-fA-F\d]{8}-?[a-fA-F\d]{4}-?[a-fA-F\d]{4}-?[a-fA-F\d]{4}-?[a-fA-F\d]{12})?$");
+            Regex start = new Regex(@"^/start ([a-fA-F\d]{8}-?[a-fA-F\d]{4}-?[a-fA-F\d]{4}-?[a-fA-F\d]{4}-?[a-fA-F\d]{12})?$");
 
             string text = "";
 
@@ -40,15 +41,24 @@ namespace CityQuestBot.Common
             }
             else if (start.IsMatch(update.Message.Text))
             {
-                var quest = await questsTableClient.GetEntityAsync<Quests>("d", start.Match(update.Message.Text).Value);
-                user.CurrentQuest = quest.Value.RowKey;
-                user.CurrentStep = 1;
-                await usersTableClient.UpdateEntityAsync(user, ETag.All);
-                await SendClue(botClient, usersTableClient, messagesTableClient, clueFilesBlobClient, update);
+                try
+                {
+                    var quest = await questsTableClient.GetEntityAsync<Quests>("d", start.Match(update.Message.Text).Groups[1].Value);
+                    user.CurrentQuest = quest.Value.RowKey;
+                    user.CurrentStep = 1;
+                    await usersTableClient.UpdateEntityAsync(user, ETag.All);
+                    await AnswersServices.DeleteAnswers(user.RowKey, answersTableClient);
+                    await SendClue(botClient, usersTableClient, messagesTableClient, answersTableClient, clueFilesBlobClient, update);
+                    return;
+                }
+                catch
+                {
+                    text = "Ошибка, скорее всего такой квест отсутствует";
+                }
             }
             else
             {
-                text = "";
+                text = "Не корректная ссылка";
             }
 
             await botClient.SendTextMessageAsync(chatId, text);
@@ -106,7 +116,7 @@ namespace CityQuestBot.Common
             var chatId = update.Message.Chat.Id;
             string text = "";
 
-            if (string.IsNullOrWhiteSpace(update.Message.Text) || !new Regex(@"^\w$").IsMatch(update.Message.Text))
+            if (string.IsNullOrWhiteSpace(update.Message.Text))
             {
                 text = "Сообщение должно содержать текст и исключительно текст";
                 await botClient.SendTextMessageAsync(chatId, text);
@@ -125,7 +135,7 @@ namespace CityQuestBot.Common
             user.CurrentStep++;
             await usersTableClient.UpdateEntityAsync(user, ETag.All);
 
-            await SendClue(botClient, usersTableClient, messagesTableClient, clueFilesBlobClient, update);
+            await SendClue(botClient, usersTableClient, messagesTableClient, answersTableClient, clueFilesBlobClient, update);
         }
 
         private static async Task SendClue(
@@ -153,7 +163,7 @@ namespace CityQuestBot.Common
                     await usersTableClient.UpdateEntityAsync(user, ETag.All);
                     var answers = await AnswersServices.GetAnswers(user.RowKey, answersTableClient);
                     string text = string.Join(Environment.NewLine, answers.Select(a => a.Answer));
-                    await botClient.SendTextMessageAsync(chatId, text);
+                    await botClient.SendTextMessageAsync(chatId, $"Ответы, которые были даны за игру:\n {text}");
                 }
 
                 if (message.Type == "win" || message.Type == "lose")
@@ -163,10 +173,13 @@ namespace CityQuestBot.Common
 
                 if (message.Type == "fact")
                 {
-                    await Task.Run(async () =>
+                    new Thread(async () =>
                     {
-                        Thread.Sleep(1000 * 60 * 4);
-                        minutes += 4;
+                        await Task.Delay(1000 * 60 * minutes);
+                        if (user.CurrentStep != message.Step || string.IsNullOrWhiteSpace(user.CurrentQuest))
+                        {
+                            return;
+                        }
                         if (message.ImageId != null)
                         {
                             var blob = clueFilesBlobClient.GetBlobClient(message.ImageId);
@@ -179,8 +192,8 @@ namespace CityQuestBot.Common
                         {
                             await botClient.SendTextMessageAsync(chatId, message.MessageText);
                         }
-                    });
-
+                    }).Start();
+                    minutes += 4;
                     continue;
                 }
 
@@ -212,9 +225,13 @@ namespace CityQuestBot.Common
 
             Users user = await UsersServices.GetUser(usersTableClient, chatId.ToString());
 
-            var messages = await ClueServices.GetClue(messagesTableClient, user.CurrentQuest, user.CurrentStep);
-
             var quest = (await questsTableClient.GetEntityAsync<Quests>("d", user.CurrentQuest)).Value;
+
+            var messages = await ClueServices.GetClue(messagesTableClient, user.CurrentQuest, await ClueServices.GetClueCount(messagesTableClient, quest.RowKey));
+
+            user.CurrentQuest = string.Empty;
+
+            await usersTableClient.UpdateEntityAsync(user, ETag.All);
 
             Messages message;
 

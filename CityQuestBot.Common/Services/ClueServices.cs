@@ -1,4 +1,5 @@
-﻿using Azure.Data.Tables;
+﻿using Azure;
+using Azure.Data.Tables;
 using Azure.Storage.Blobs;
 using CityQuestBot.Common.Models;
 using System;

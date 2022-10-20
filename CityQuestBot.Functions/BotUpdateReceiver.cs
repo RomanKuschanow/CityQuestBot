@@ -60,21 +60,21 @@ namespace CityQuestBot.Functions
                 await botClient.SendTextMessageAsync(message.Chat.Id, "Я понимаю только текст");
             }
 
-            if (message.Text.StartsWith("/start") && user.CurrentQuest == null)
+            if (message.Text.StartsWith("/start") && string.IsNullOrWhiteSpace(user.CurrentQuest))
             {
-                await Handlers.CommandStart(botClient, usersTableClient, questsTableClient, messagesTableClient, clueFilesBlobClient, update);
+                await Handlers.CommandStart(botClient, usersTableClient, questsTableClient, messagesTableClient, answersTableClient, clueFilesBlobClient, update);
                 await Handlers.WriteHistory(historyTableClient, usersTableClient, update);
                 return "";
             }
 
-            if (message.Text.StartsWith("/editPrewAnswer") && user.CurrentQuest != null)
+            if (message.Text.StartsWith("/editPrewAnswer") && string.IsNullOrWhiteSpace(user.CurrentQuest))
             {
                 await Handlers.CommandChangeAnswer(botClient, usersTableClient, answersTableClient, messagesTableClient, update);
                 await Handlers.WriteHistory(historyTableClient, usersTableClient, update);
                 return "";
             }
 
-            if (user.CurrentQuest != null)
+            if (!string.IsNullOrWhiteSpace(user.CurrentQuest))
             {
                 await Handlers.AnswerHandler(botClient, usersTableClient, messagesTableClient, answersTableClient, questsTableClient, clueFilesBlobClient, update);
                 await Handlers.WriteHistory(historyTableClient, usersTableClient, update);

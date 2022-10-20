@@ -5,6 +5,7 @@ using Serilog;
 using Telegram.Bot.Types;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 using Azure.Storage.Blobs;
+using System.Threading.Tasks;
 
 namespace CityQuestBot.Functions
 {
@@ -20,7 +21,7 @@ namespace CityQuestBot.Functions
                 .CreateLogger();
         }
 
-        public static async IBotUpdateReceiver BuildBotUpdateReceiver(
+        public static async Task<IBotUpdateReceiver> BuildBotUpdateReceiver(
             Options options,
             Update update,
             ILogger log)
@@ -34,8 +35,8 @@ namespace CityQuestBot.Functions
             var messagesTableClient = new TableClient(conn, "messages");
             var answersTableClient = new TableClient(conn, "answers");
             var historyTableClient = new TableClient(conn, "history");
-            var clueFilesBlobClient = new BlobContainerClient(conn, "clueFiles");
-            var historyFilesBlobClient = new BlobContainerClient(conn, "historyFiles");
+            var clueFilesBlobClient = new BlobContainerClient(conn, "cluefiles");
+            var historyFilesBlobClient = new BlobContainerClient(conn, "historyfiles");
 
             await usersTableClient.CreateIfNotExistsAsync();
             await questsTableClient.CreateIfNotExistsAsync();
