@@ -27,7 +27,7 @@ namespace CityQuestBot.Functions
             ILogger log)
         {
             RegisterSerilog(log);
-            IGetAppSettingService getAppSettingService = new GetAppSettingServiceOnAppSettings(options);
+            IGetAppSettingService getAppSettingService = new GetAppSettingService();
 
             string conn = getAppSettingService.GetAppSettingOrThrow("AzureWebJobsStorage");
             var usersTableClient = new TableClient(conn, "users");
