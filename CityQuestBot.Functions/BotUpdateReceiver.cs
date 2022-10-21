@@ -57,7 +57,7 @@ namespace CityQuestBot.Functions
 
             if (string.IsNullOrWhiteSpace(message.Text))
             {
-                await botClient.SendTextMessageAsync(message.Chat.Id, "Я понимаю только текст");
+                await botClient.SendTextMessageAsync(message.Chat.Id, "I only understand text");
             }
 
             if (message.Text.StartsWith("/start") && string.IsNullOrWhiteSpace(user.CurrentQuest))

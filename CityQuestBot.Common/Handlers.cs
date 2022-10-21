@@ -37,7 +37,7 @@ namespace CityQuestBot.Common
 
             if (update.Message.Text == "/start")
             {
-                text = "Для участия в игре попросите пригласительную ссылку у организатора";
+                text = "To participate in the game, ask the organizer for an invitation link";
             }
             else if (start.IsMatch(update.Message.Text))
             {
@@ -53,12 +53,12 @@ namespace CityQuestBot.Common
                 }
                 catch
                 {
-                    text = "Ошибка, скорее всего такой квест отсутствует";
+                    text = "Error, most likely there is no such quest";
                 }
             }
             else
             {
-                text = "Не корректная ссылка";
+                text = "Invalid link";
             }
 
             await botClient.SendTextMessageAsync(chatId, text);
@@ -75,18 +75,18 @@ namespace CityQuestBot.Common
 
             Users user = await UsersServices.GetUser(usersTableClient, chatId.ToString());
 
-            Regex regex = new Regex(@"/editPrevAnswer (.+)");
+            Regex regex = new Regex(@"/edit (.+)");
 
             if (!regex.IsMatch(update.Message.Text))
             {
-                string text = "Команда должна содержать новый ответ";
+                string text = "This command is used like this:\r\n\"/edit newAnswer\"";
                 await botClient.SendTextMessageAsync(chatId, text);
                 return;
             }
 
             if (user.CurrentStep == 1)
             {
-                string text = "Предыдущей загадки не было";
+                string text = "Sorry, can't edit the answer that doesn't exist.";
                 await botClient.SendTextMessageAsync(chatId, text);
                 return;
             }
@@ -118,7 +118,7 @@ namespace CityQuestBot.Common
 
             if (string.IsNullOrWhiteSpace(update.Message.Text))
             {
-                text = "Сообщение должно содержать текст и исключительно текст";
+                text = "The answer must only contain text";
                 await botClient.SendTextMessageAsync(chatId, text);
                 return;
             }
@@ -163,7 +163,7 @@ namespace CityQuestBot.Common
                     await usersTableClient.UpdateEntityAsync(user, ETag.All);
                     var answers = await AnswersServices.GetAnswers(user.RowKey, answersTableClient);
                     string text = string.Join(Environment.NewLine, answers.Select(a => a.Answer));
-                    await botClient.SendTextMessageAsync(chatId, $"Ответы, которые были даны за игру:\n {text}");
+                    await botClient.SendTextMessageAsync(chatId, $"Here's the list of all the answers you gave previously:\n {text}");
                 }
 
                 if (message.Type == "win" || message.Type == "lose")
@@ -176,7 +176,8 @@ namespace CityQuestBot.Common
                     new Thread(async () =>
                     {
                         await Task.Delay(1000 * 60 * minutes);
-                        if (user.CurrentStep != message.Step || string.IsNullOrWhiteSpace(user.CurrentQuest))
+                        var _user = await UsersServices.GetUser(usersTableClient, chatId.ToString());
+                        if (_user.CurrentStep != message.Step || string.IsNullOrWhiteSpace(_user.CurrentQuest))
                         {
                             return;
                         }
@@ -246,7 +247,7 @@ namespace CityQuestBot.Common
 
             if (message == null)
             {
-                await botClient.SendTextMessageAsync(chatId, "Правильный ответ мне пока не известен 🤷‍♂️");
+                await botClient.SendTextMessageAsync(chatId, "I don't yet have the correct answer 🤷‍♂️  but I'll let you know as soon as I can");
                 return;
             }
 
